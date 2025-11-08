@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Email Spam Detector</title>
+  <style>
+    /* Variables */
+    :root {
+      --bg: #0f1724;
+      --card: #0b1220;
+      --muted: #98a2b3;
+      --accent: #4f46e5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --glass: rgba(255, 255, 255, 0.03);
+      --radius: 12px;
+      --pad: 18px;
+      color-scheme: dark;
+    }
+
+    /* Base styles */
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+      background: linear-gradient(180deg, #071025 0%, #081126 60%);
+      color: #e6eef8;
+      padding: 32px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 980px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+    }
+
+    @media (max-width: 920px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* Card styles */
+    .card {
+      background: linear-gradient(180deg, var(--card), rgba(11, 18, 32, 0.6));
+      border-radius: var(--radius);
+      padding: var(--pad);
+      box-shadow: 0 6px 24px rgba(2, 6, 23, 0.6);
+    }
+
+    /* Typography */
+    header h1 { margin: 0; font-size: 20px; }
+    header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+    /* Form elements */
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+
+    input[type=text], textarea {
+      background: var(--glass);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: inherit;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    /* Buttons and Controls */
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.ghost {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+    }
+
+    /* Example chips */
+    .examples {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Results section */
+    .result {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .badge.spam {
+      background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.06));
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.07);
+    }
+
+    .badge.ham {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.03));
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.06);
+    }
+
+    .probs {
+      display: flex;
+      gap: 8px;
+      flex-direction: column;
+    }
+
+    .prob-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+    }
+
+    /* Utility classes */
+    .meta { font-size: 13px; color: var(--muted); }
+    .copy-btn {
+      background: transparent;
+      border: 1px dashed rgba(255, 255, 255, 0.03);
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .status {
+      font-size: 13px;
+      padding: 8px;
+      margin-top: 8px;
+      border-radius: 8px;
+    }
+
+    .status.ok { background: rgba(79, 70, 229, 0.08); }
+    .status.warn { background: rgba(250, 204, 21, 0.06); color: #f59e0b; }
+    .status.err { background: rgba(239, 68, 68, 0.06); color: #fecaca; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <header>
+        <h1>Email Spam Detector</h1>
+        <p>Paste the email text (or subject + sender) and click Predict. This UI will try POST /predict first. If the server returns 405 (method not allowed), it will attempt alternative routes and finally fall back to a local heuristic predictor so you can continue testing the UI.</p>
+      </header>
+
+      <main style="margin-top:16px">
+        <form id="predict-form">
+          <div style="display:flex; gap:12px; margin-bottom:12px;">
+            <div style="flex:1">
+              <label for="subject">Subject (optional)</label>
+              <input id="subject" type="text" placeholder="Your subject here" />
+            </div>
+            <div style="width:160px">
+              <label for="sender">Sender (optional)</label>
+              <input id="sender" type="text" placeholder="alice@company.com" />
+            </div>
+          </div>
+
+          <div>
+            <label for="text">Email / Message text</label>
+            <textarea id="text" placeholder="Paste email body here..." required></textarea>
+          </div>
+
+          <div class="examples">
+            <div class="chip" data-example="Free entry in 2 a weekly competition to win a £1000 prize. Text WIN to 80086">Lottery / Spam</div>
+            <div class="chip" data-example="Hi team, attaching the Q3 report — please review before Monday">Work / Ham</div>
+            <div class="chip" data-example="Get cheap meds! No prescription required. Visit www.pharmacy.example">Pharma Spam</div>
+            <div class="chip" data-example="Your Amazon order has been dispatched. Track at https://amazon.example/track">Order / Ham</div>
+          </div>
+
+          <div class="controls">
+            <button id="predict-btn" type="submit">Predict</button>
+            <button id="clear-btn" type="button" class="ghost">Clear</button>
+            <button id="demo-btn" type="button" class="secondary">Fill Demo</button>
+            <button id="test-backend" type="button" class="ghost">Test backend</button>
+          </div>
+        </form>
+
+        
+
+
+          <div class="meta" style="margin-top:8px">If your server returns 405, check that the route exists and that it is decorated to accept POST requests. This UI will try graceful fallbacks but a real POST /predict API is the best option.</div>
+        </div>
+      </main>
+    </div>
+
+    <aside class="card">
+      <h3 style="margin:0 0 8px 0">Prediction</h3>
+      <div id="output" class="result">
+        <div class="meta">No prediction yet — enter text and click <em>Predict</em>.</div>
+      </div>
+
+      
+
+      <div id="status" class="status" style="margin-top:12px">Backend status unknown</div>
+
+      
+    </aside>
+  </div>
+
+  <script>
+    const form = document.getElementById('predict-form');
+    const textInput = document.getElementById('text');
+    const subjectInput = document.getElementById('subject');
+    const senderInput = document.getElementById('sender');
+    const output = document.getElementById('output');
+    const copyBtn = document.getElementById('copy-res');
+    const openDev = document.getElementById('open-dev');
+    const statusEl = document.getElementById('status');
+    const testBackendBtn = document.getElementById('test-backend');
+
+    let lastResult = null;
+
+    function setStatus(msg, level='ok'){
+      statusEl.textContent = msg;
+      statusEl.className = 'status ' + (level === 'ok' ? 'ok' : level === 'warn' ? 'warn' : 'err');
+    }
+
+    function safeParseJson(res){
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) return res.json().catch(() => null);
+      return res.text().catch(() => null).then(t => {
+        try{ return JSON.parse(t); }catch(e){ return null; }
+      });
+    }
+
+    function setOutput(data, metaText=''){
+      output.innerHTML = '';
+      if (metaText) {
+        const meta = document.createElement('div'); meta.className='meta'; meta.textContent = metaText; output.appendChild(meta);
+      }
+
+      const label = data && data.label ? data.label : 'unknown';
+      const badge = document.createElement('div'); badge.className = 'badge ' + (label === 'spam' ? 'spam' : 'ham'); badge.textContent = (label || 'unknown').toUpperCase(); output.appendChild(badge);
+
+      if (data && data.proba && typeof data.proba === 'object') {
+        const probs = document.createElement('div'); probs.className = 'probs';
+        Object.keys(data.proba).sort().forEach(k => {
+          const item = document.createElement('div'); item.className = 'prob-item';
+          const name = document.createElement('div'); name.textContent = k;
+          const valNum = Number(data.proba[k]);
+          const val = document.createElement('div'); val.textContent = Number.isFinite(valNum) ? (valNum*100).toFixed(1) + '%' : String(data.proba[k]);
+          item.appendChild(name); item.appendChild(val);
+          probs.appendChild(item);
+        });
+        output.appendChild(probs);
+      }
+
+      const raw = document.createElement('pre'); raw.style.marginTop = '8px'; raw.style.whiteSpace = 'pre-wrap'; raw.style.fontSize='12px'; raw.textContent = JSON.stringify(data || {}, null, 2); output.appendChild(raw);
+      lastResult = data || null;
+    }
+
+    function localPredict(payload){
+      const text = ((payload.subject || '') + ' ' + (payload.sender || '') + ' ' + (payload.text || '')).toLowerCase();
+      const keywords = ['free','win','winner','prize','click','claim','urgent','buy now','buy','cheap','cheap meds','prescription','congrat','selected','limited time','offer','http','bit.ly','visit'];
+      let score = 0;
+      for (const k of keywords){ if (text.includes(k)) score += 1; }
+      if (text.match(/https?:\/\//) || text.match(/www\./)) score += 2;
+      const txt = payload.text || '';
+      const digitCount = (txt.match(/\d/g) || []).length;
+      const digitRatio = txt.length ? digitCount / txt.length : 0;
+      if (digitRatio > 0.2) score += 1;
+      const proba_spam = Math.min(0.99, Math.tanh(score/3) );
+      const proba_ham = Math.max(0.01, 1 - proba_spam);
+      return { label: proba_spam > 0.5 ? 'spam' : 'ham', proba: { spam: Number(proba_spam.toFixed(3)), ham: Number(proba_ham.toFixed(3)) } };
+    }
+
+    async function tryPost(url, payload){
+      try{
+        return await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+      }catch(e){ return { ok:false, status:0, _error:e }; }
+    }
+
+    async function tryGet(url, payload){
+      try{
+        const qp = new URLSearchParams(payload).toString();
+        return await fetch(url + (qp ? ('?' + qp) : ''), { method: 'GET' });
+      }catch(e){ return { ok:false, status:0, _error:e }; }
+    }
+
+    async function predictWithFallback(payload){
+      setStatus('Attempting POST /predict...', 'ok');
+      try{
+        let res = await tryPost('/predict', payload);
+        if (!res || res.status === 405 || res.status === 0){
+          if (res && res.status === 405) setStatus('POST /predict returned 405 — trying GET /predict...', 'warn');
+          else if (res && res.status === 0) setStatus('POST /predict failed (network) — trying GET /predict...', 'warn');
+          else setStatus('POST /predict failed — trying GET /predict...', 'warn');
+          try{
+            res = await tryGet('/predict', payload);
+            if (res && res.ok){ const data = await safeParseJson(res) || {}; setStatus('GET /predict succeeded', 'ok'); return { data, used: 'GET /predict' }; }
+            if (res && res.status === 405){ setStatus('GET /predict returned 405 — trying POST /api/predict...', 'warn'); const res2 = await tryPost('/api/predict', payload); if (res2 && res2.ok){ const data = await safeParseJson(res2) || {}; setStatus('POST /api/predict succeeded', 'ok'); return { data, used: 'POST /api/predict' }; } setStatus('All network attempts failed. Falling back to local heuristic.', 'err'); return { data: localPredict(payload), used: 'local_fallback' }; }
+            if (res && !res.ok){ setStatus('GET /predict failed with status ' + res.status + '. Falling back to local.', 'warn'); return { data: localPredict(payload), used: 'local_fallback' }; }
+          }catch(e){ setStatus('GET attempt failed. Falling back to local.', 'err'); return { data: localPredict(payload), used: 'local_fallback' }; }
+        }
+        if (res && res.ok){ const data = await safeParseJson(res) || {}; setStatus('POST /predict succeeded', 'ok'); return { data, used: 'POST /predict' }; }
+        setStatus('POST /predict failed with status ' + (res && res.status ? res.status : 'unknown') + '. Trying POST /api/predict...', 'warn');
+        const r2 = await tryPost('/api/predict', payload);
+        if (r2 && r2.ok){ const data = await safeParseJson(r2) || {}; setStatus('POST /api/predict succeeded', 'ok'); return { data, used: 'POST /api/predict' }; }
+        return { data: localPredict(payload), used: 'local_fallback' };
+      }catch(err){ return { data: localPredict(payload), used: 'local_fallback' }; }
+    }
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const payload = { subject: subjectInput.value || '', sender: senderInput.value || '', text: textInput.value || '' };
+      output.innerHTML = '<div class="meta">Predicting…</div>';
+      const out = await predictWithFallback(payload);
+      const meta = 'Used: ' + (out.used || 'local_fallback') + ((out.used === 'local_fallback') ? ' (heuristic). Backend may be missing or reject POST.' : '');
+      setOutput(out.data, meta);
+    });
+
+    testBackendBtn.addEventListener('click', async () => {
+      setStatus('Testing backend endpoints...', 'ok');
+      const sample = { subject: 'Test', sender: 'test@example.com', text: 'hello' };
+      try{
+        const p = await tryPost('/predict', sample);
+        if (p && p.ok) { setStatus('POST /predict OK (status ' + p.status + ')', 'ok'); const dd = await (safeParseJson(p).then(j=> j ? JSON.stringify(j) : p.text())); alert('POST /predict returned: ' + dd); return; }
+        if (p && p.status === 405){ setStatus('POST /predict returned 405 — server forbids POST to this route', 'warn'); }
+        const g = await tryGet('/predict', sample);
+        if (g && g.ok){ setStatus('GET /predict OK (status ' + g.status + ')', 'ok'); const dd = await (safeParseJson(g).then(j=> j ? JSON.stringify(j) : g.text())); alert('GET /predict returned: ' + dd); return; }
+        if (g && g.status === 405){ setStatus('GET /predict returned 405 as well', 'warn'); }
+        const p2 = await tryPost('/api/predict', sample);
+        if (p2 && p2.ok){ setStatus('POST /api/predict OK', 'ok'); const dd = await (safeParseJson(p2).then(j=> j ? JSON.stringify(j) : p2.text())); alert('POST /api/predict returned: ' + dd); return; }
+        setStatus('No backend endpoints responded OK. Using local fallback for predictions.', 'err');
+      }catch(e){ setStatus('Network error testing backend', 'err'); alert('Network error: ' + (e && e.message ? e.message : String(e))); }
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => { textInput.value = ''; subjectInput.value = ''; senderInput.value = ''; output.innerHTML = '<div class="meta">Cleared — enter text and click Predict.</div>'; setStatus('Backend status unknown'); });
+
+    document.getElementById('demo-btn').addEventListener('click', () => { subjectInput.value = 'Claim your prize'; senderInput.value = 'promo@scam.example'; textInput.value = 'Congratulations! You have been selected to receive a free gift card. Click the link to claim: http://bit.ly/fake'; });
+
+    document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => { textInput.value = c.dataset.example; }));
+
+    copyBtn.addEventListener('click', () => { if (!lastResult) { navigator.clipboard.writeText('No result to copy.'); return; } navigator.clipboard.writeText(JSON.stringify(lastResult)); copyBtn.textContent = 'Copied!'; setTimeout(() => copyBtn.textContent = 'Copy Result JSON', 1400); });
+
+    openDev.addEventListener('click', () => { console.log('Dev console opened manually'); alert('Open your browser dev tools (F12 / Cmd+Opt+I) to see network requests.'); });
+
+    (async function checkOnLoad(){
+      try{
+        const r = await fetch('/predict', { method: 'OPTIONS' });
+        if (r && r.ok) setStatus('Backend /predict exists (OPTIONS ok)', 'ok');
+        else if (r && r.status === 400) setStatus('Backend reachable — OPTIONS returned 400 (server may not allow OPTIONS)', 'warn');
+        else setStatus('/predict exists but OPTIONS returned ' + (r && r.status ? r.status : 'unknown'), 'warn');
+      }catch(e){ setStatus('Unable to reach /predict on load', 'warn'); }
+    })();
+  </script>
+</body>
+</html>
