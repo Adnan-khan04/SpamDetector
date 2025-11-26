@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Email Spam Detector</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <header>
+        <h1>Email Spam Detector</h1>
+        <p>Paste the email text (or subject + sender) and click Predict. This UI will try POST /predict first. If the server returns 405 (method not allowed), it will attempt alternative routes and finally fall back to a local heuristic predictor so you can continue testing the UI.</p>
+      </header>
+
+      <main style="margin-top:16px">
+        <form id="predict-form">
+          <div style="display:flex; gap:12px; margin-bottom:12px;">
+            <div style="flex:1">
+              <label for="subject">Subject (optional)</label>
+              <input id="subject" type="text" placeholder="Your subject here" />
+            </div>
+            <div style="width:160px">
+              <label for="sender">Sender (optional)</label>
+              <input id="sender" type="text" placeholder="alice@company.com" />
+            </div>
+          </div>
+
+          <div>
+            <label for="text">Email / Message text</label>
+            <textarea id="text" placeholder="Paste email body here..." required></textarea>
+          </div>
+
+          <div class="examples">
+            <div class="chip" data-example="Free entry in 2 a weekly competition to win a £1000 prize. Text WIN to 80086">Lottery / Spam</div>
+            <div class="chip" data-example="Hi team, attaching the Q3 report — please review before Monday">Work / Ham</div>
+            <div class="chip" data-example="Get cheap meds! No prescription required. Visit www.pharmacy.example">Pharma Spam</div>
+            <div class="chip" data-example="Your Amazon order has been dispatched. Track at https://amazon.example/track">Order / Ham</div>
+          </div>
+
+          <div class="controls">
+            <button id="predict-btn" type="submit">Predict</button>
+            <button id="clear-btn" type="button" class="ghost">Clear</button>
+            <button id="demo-btn" type="button" class="secondary">Fill Demo</button>
+            <button id="test-backend" type="button" class="ghost">Test backend</button>
+          </div>
+        </form>
+
+        <div class="meta" style="margin-top:8px">
+          If your server returns 405, check that the route exists and that it is decorated to accept POST requests. This UI will try graceful fallbacks but a real POST /predict API is the best option.
+        </div>
+      </main>
+    </div>
+
+    <aside class="card">
+      <h3 style="margin:0 0 8px 0">Prediction</h3>
+      <div id="output" class="result">
+        <div class="meta">No prediction yet — enter text and click <em>Predict</em>.</div>
+      </div>
+
+      <div id="status" class="status" style="margin-top:12px">Backend status unknown</div>
+    </aside>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
