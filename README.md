@@ -5,6 +5,11 @@
 An interactive **web-based Email Spam Detection UI** that allows users to test emails or messages for spam likelihood. The interface communicates with a backend API (`/predict` or `/api/predict`) to classify text as **spam** or **ham** (not spam). If the backend is unavailable, it gracefully falls back to a **local heuristic spam detector** — so users can still test and visualize predictions offline.
 
 
+--> website for to see the output of Spam Detaector. --->> https://spamdetctor.netlify.app/
+
+
+
+
 ## 🚀 Introduction
 
 The **Email Spam Detector** is a modern single-page web app designed for testing and visualizing spam detection.
